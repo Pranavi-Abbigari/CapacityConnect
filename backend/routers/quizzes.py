@@ -15,6 +15,7 @@ from schemas.quiz import (
     QuizResultsSummaryResponse,
 )
 from security import require_trainer, require_trainee, get_current_user
+from services.completion import evaluate_and_update_course_completion
 
 router = APIRouter(prefix="/api", tags=["quizzes"])
 
@@ -158,6 +159,13 @@ def submit_quiz(
 
     db.commit()
     db.refresh(new_attempt)
+
+    # Check and update course completion if all quizzes are passed
+    try:
+        evaluate_and_update_course_completion(db, course_id=quiz.course_id, trainee_id=current_user.id)
+    except Exception as e:
+        print(f"Error evaluating completion on submit: {e}")
+
     return new_attempt
 
 

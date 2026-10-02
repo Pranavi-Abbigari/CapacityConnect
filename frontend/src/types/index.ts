@@ -235,3 +235,80 @@ export interface CourseTrainerMatchingResponse {
   ranked_trainers: TrainerMatchItem[];
 }
 
+export type CertificateStatus = 'ACTIVE' | 'REVOKED';
+
+export interface Certificate {
+  id: number;
+  certificate_code: string;
+  course_id: number;
+  course_title?: string;
+  trainee_id: number;
+  trainee_name?: string;
+  issuer_id: number;
+  issuer_name?: string;
+  issue_date: string;
+  status: CertificateStatus;
+  grade?: string | null;
+  verification_hash: string;
+  verification_url?: string;
+}
+
+export interface CertificateVerification {
+  certificate_code: string;
+  status: string;
+  is_valid: boolean;
+  course_title: string;
+  trainee_name: string;
+  issuer_name: string;
+  issue_date: string;
+  grade?: string | null;
+  verification_hash: string;
+}
+
+export interface AppNotification {
+  id: number;
+  user_id: number;
+  title: string;
+  message: string;
+  type: string;
+  link?: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface QuizEvaluation {
+  quiz_id: number;
+  quiz_title: string;
+  passed: boolean;
+  best_score?: number | null;
+  attempts_count: number;
+}
+
+export interface CourseCompletionStatus {
+  course_id: number;
+  course_title: string;
+  trainee_id: number;
+  is_completed: boolean;
+  completed_at?: string | null;
+  total_quizzes: number;
+  passed_quizzes: number;
+  average_score?: number | null;
+  grade?: string | null;
+  quiz_evaluations: QuizEvaluation[];
+}
+
+export interface TraineeCompletionSummary {
+  trainee_id: number;
+  trainee_name: string;
+  trainee_email: string;
+  enrolled_at: string;
+  completed_at?: string | null;
+  is_completed: boolean;
+  has_certificate: boolean;
+  certificate_id?: number | null;
+  certificate_code?: string | null;
+  certificate_status?: string | null;
+  suggested_grade?: string | null;
+  average_score?: number | null;
+}
+

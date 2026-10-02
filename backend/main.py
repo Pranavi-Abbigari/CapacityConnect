@@ -9,6 +9,8 @@ from routers import (
     quizzes_router,
     profiles_router,
     competencies_router,
+    certificates_router,
+    notifications_router,
     seed_initial_skills,
 )
 
@@ -40,6 +42,8 @@ app.include_router(courses_router)
 app.include_router(quizzes_router)
 app.include_router(profiles_router)
 app.include_router(competencies_router)
+app.include_router(certificates_router)
+app.include_router(notifications_router)
 
 
 @app.get("/")

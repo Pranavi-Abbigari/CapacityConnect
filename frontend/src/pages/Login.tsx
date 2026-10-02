@@ -64,7 +64,7 @@ export const LoginPage: React.FC = () => {
             <span className="text-white font-black text-2xl">LB</span>
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">LearnBridge</h1>
-          <p className="text-slate-400 text-xs mt-1">SIH26075 – Capacity Building & Learning Portal</p>
+          <p className="text-slate-400 text-xs mt-1">Capacity Building & Learning Portal</p>
           <div className="mt-4 inline-block px-3 py-1 bg-slate-800/80 border border-slate-700/80 rounded-full">
             <span className="text-xs text-indigo-300 font-medium">Secure Portal Login</span>
           </div>

@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
-import { adminApi, coursesApi } from '../api/client';
+import { adminApi, coursesApi, certificatesApi } from '../api/client';
 import { AdminUserProfileModal } from '../components/AdminUserProfileModal';
-import type { AdminDashboardData, User, Course } from '../types';
+import { CertificateModal } from '../components/CertificateModal';
+import type { AdminDashboardData, User, Course, Certificate } from '../types';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'courses'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'courses' | 'certificates'>('overview');
   const [stats, setStats] = useState<AdminDashboardData | null>(null);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
+  const [revokingId, setRevokingId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -18,17 +22,19 @@ export const AdminDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [dashStats, pending, users, courseList] = await Promise.all([
+      const [dashStats, pending, users, courseList, certList] = await Promise.all([
         adminApi.getDashboard().catch(() => null),
         adminApi.getPendingUsers().catch(() => []),
         adminApi.getAllUsers().catch(() => []),
         coursesApi.getCourses().catch(() => []),
+        certificatesApi.getAdminCertificates().catch(() => []),
       ]);
 
       if (dashStats) setStats(dashStats);
       setPendingUsers(pending);
       setAllUsers(users);
       setCourses(courseList);
+      setCertificates(certList);
     } catch (err: unknown) {
       console.error('Failed to load admin dashboard data', err);
     } finally {
@@ -56,11 +62,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleRevokeCertificate = async (certId: number) => {
+    if (!window.confirm('Are you sure you want to revoke this certificate? This action will invalidate its public verification.')) {
+      return;
+    }
+    setRevokingId(certId);
+    setFeedback(null);
+    try {
+      const updated = await certificatesApi.revokeCertificate(certId);
+      setCertificates((prev) =>
+        prev.map((c) => (c.id === certId ? { ...c, status: updated.status } : c))
+      );
+      setFeedback({ text: `Certificate #${certId} has been revoked.`, type: 'success' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setFeedback({ text: error.message || 'Failed to revoke certificate', type: 'error' });
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
   const navTabs = [
     { id: 'overview', label: 'Overview & Analytics' },
     { id: 'approvals', label: `Pending Approvals (${pendingUsers.length})` },
     { id: 'users', label: 'User Directory' },
     { id: 'courses', label: 'Course Catalog' },
+    { id: 'certificates', label: `Certificates (${certificates.length})` },
   ];
 
   return (
@@ -209,8 +236,8 @@ export const AdminDashboard: React.FC = () => {
                     <span className="font-mono text-indigo-400">HS256 JWT + Role-based Access</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-slate-800/40 rounded-xl border border-slate-800">
-                    <span>Problem Statement</span>
-                    <span className="font-mono text-purple-400">SIH26075 – Capacity Connect</span>
+                    <span>Platform</span>
+                    <span className="font-mono text-purple-400">Capacity Connect</span>
                   </div>
                 </div>
               </div>
@@ -386,6 +413,121 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 5: Certificates Management */}
+        {activeTab === 'certificates' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">Certificate Governance & Revocation</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Global credential ledger. Audit certificates, preview cryptographic seals, and execute revocations.
+                </p>
+              </div>
+              <a
+                href="/verify-certificate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <span>Public Verification Registry ↗</span>
+              </a>
+            </div>
+
+            {loading ? (
+              <div className="py-12 text-center text-slate-500 text-xs">Loading certificate records...</div>
+            ) : certificates.length === 0 ? (
+              <div className="py-12 bg-slate-850 border border-slate-800 rounded-2xl text-center">
+                <span className="text-3xl block mb-2">🏆</span>
+                <p className="text-sm font-semibold text-slate-300">No Certificates Issued Yet</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Certificates issued by trainers or admins will be archived and auditable here.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-800 rounded-2xl">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-slate-800/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="px-4 py-3">Code</th>
+                      <th className="px-4 py-3">Course</th>
+                      <th className="px-4 py-3">Recipient</th>
+                      <th className="px-4 py-3">Issuer</th>
+                      <th className="px-4 py-3">Issue Date</th>
+                      <th className="px-4 py-3">Grade</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {certificates.map((cert) => (
+                      <tr key={cert.id} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="px-4 py-3 font-mono font-bold text-indigo-300">
+                          {cert.certificate_code}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-white max-w-xs truncate">
+                          {cert.course_title || `Course #${cert.course_id}`}
+                        </td>
+                        <td className="px-4 py-3 text-slate-200">
+                          {cert.trainee_name || `User #${cert.trainee_id}`}
+                        </td>
+                        <td className="px-4 py-3 text-slate-400">
+                          {cert.issuer_name || `User #${cert.issuer_id}`}
+                        </td>
+                        <td className="px-4 py-3 text-[11px] text-slate-400">
+                          {new Date(cert.issue_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 font-bold text-emerald-400">
+                          {cert.grade || 'Pass'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              cert.status === 'ACTIVE'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-rose-950 text-rose-300 border-rose-800'
+                            }`}
+                          >
+                            ● {cert.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                          <button
+                            onClick={() => setSelectedCertForModal(cert)}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg text-[11px] font-semibold transition-all cursor-pointer"
+                          >
+                            Diploma & QR
+                          </button>
+                          <a
+                            href={`/verify-certificate?code=${cert.certificate_code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold transition-all inline-block"
+                          >
+                            Verify ↗
+                          </a>
+                          {cert.status === 'ACTIVE' ? (
+                            <button
+                              onClick={() => handleRevokeCertificate(cert.id)}
+                              disabled={revokingId === cert.id}
+                              className="px-2.5 py-1 bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 rounded-lg text-[11px] font-semibold transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {revokingId === cert.id ? 'Revoking...' : 'Revoke'}
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 italic">
+                              Revoked
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Modal: Admin User Profile & Competencies Audit */}
         {inspectingUserId && (
           <AdminUserProfileModal
@@ -393,6 +535,12 @@ export const AdminDashboard: React.FC = () => {
             onClose={() => setInspectingUserId(null)}
           />
         )}
+
+        {/* Modal: Certificate Diploma Preview */}
+        <CertificateModal
+          certificate={selectedCertForModal}
+          onClose={() => setSelectedCertForModal(null)}
+        />
       </main>
     </div>
   );

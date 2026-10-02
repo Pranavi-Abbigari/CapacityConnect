@@ -18,6 +18,11 @@ import type {
   TraineeOverallSkillGap,
   CourseRecommendation,
   CourseTrainerMatchingResponse,
+  Certificate,
+  CertificateVerification,
+  AppNotification,
+  CourseCompletionStatus,
+  TraineeCompletionSummary,
 } from '../types';
 
 export const API_BASE_URL =
@@ -116,6 +121,14 @@ export const coursesApi = {
 
   getMyEnrolledCourses: () =>
     apiRequest<CourseEnrollment[]>('/api/trainee/my-courses'),
+
+  getCompletionStatus: (courseId: number, traineeId?: number) => {
+    const query = traineeId ? `?trainee_id=${traineeId}` : '';
+    return apiRequest<CourseCompletionStatus>(`/api/courses/${courseId}/completion-status${query}`);
+  },
+
+  getTrainerCourseTraineesCompletion: (courseId: number) =>
+    apiRequest<TraineeCompletionSummary[]>(`/api/trainer/courses/${courseId}/trainees-completion`),
 };
 
 // Quiz APIs
@@ -318,5 +331,50 @@ export const competenciesApi = {
 
   getAdminTrainerMatching: (courseId: number) =>
     apiRequest<CourseTrainerMatchingResponse>(`/api/admin/trainer-matching/${courseId}`),
+};
+
+// Phase 4: Certificates APIs
+export const certificatesApi = {
+  issueCertificate: (payload: { course_id: number; trainee_id: number; grade?: string }) =>
+    apiRequest<Certificate>('/api/certificates/issue', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getMyCertificates: () =>
+    apiRequest<Certificate[]>('/api/trainee/certificates'),
+
+  getTrainerCourseCertificates: (courseId: number) =>
+    apiRequest<Certificate[]>(`/api/trainer/courses/${courseId}/certificates`),
+
+  getAdminCertificates: () =>
+    apiRequest<Certificate[]>('/api/admin/certificates'),
+
+  revokeCertificate: (certificateId: number) =>
+    apiRequest<Certificate>(`/api/admin/certificates/${certificateId}/revoke`, {
+      method: 'POST',
+    }),
+
+  verifyCertificate: (certificateCode: string) =>
+    apiRequest<CertificateVerification>(`/api/certificates/verify/${encodeURIComponent(certificateCode)}`),
+};
+
+// Phase 4: Notifications APIs
+export const notificationsApi = {
+  getNotifications: () =>
+    apiRequest<AppNotification[]>('/api/notifications'),
+
+  getUnreadCount: () =>
+    apiRequest<{ unread_count: number }>('/api/notifications/unread-count'),
+
+  markAsRead: (notificationId: number) =>
+    apiRequest<AppNotification>(`/api/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+    }),
+
+  markAllAsRead: () =>
+    apiRequest<{ message: string }>('/api/notifications/mark-all-read', {
+      method: 'POST',
+    }),
 };
 

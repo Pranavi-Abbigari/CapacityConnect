@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
   activeTab?: string;
@@ -47,11 +48,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-white font-extrabold text-xl">LB</span>
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-lg font-bold text-white tracking-tight">
                   LearnBridge
-                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold border bg-indigo-950/60 text-indigo-300 border-indigo-800">
-                    SIH26075
-                  </span>
                 </h1>
                 <p className="text-xs text-slate-400">Capacity Building & Learning Portal</p>
               </div>
@@ -78,6 +76,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* User Profile & Actions */}
             <div className="flex items-center gap-3">
+              {currentUser && <NotificationBell />}
+
               {currentUser && (
                 <div className="hidden sm:flex flex-col text-right">
                   <span className="text-sm font-semibold text-white">{currentUser.name}</span>

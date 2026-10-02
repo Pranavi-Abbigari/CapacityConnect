@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/Login';
 import { SignupPage } from './pages/Signup';
+import { VerifyCertificatePage } from './pages/VerifyCertificate';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TrainerDashboard } from './pages/TrainerDashboard';
 import { TraineeDashboard } from './pages/TraineeDashboard';
@@ -44,6 +45,7 @@ function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/verify-certificate" element={<VerifyCertificatePage />} />
 
           {/* Role-Based Protected Routes */}
           <Route

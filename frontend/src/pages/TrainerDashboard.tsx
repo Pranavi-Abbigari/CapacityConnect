@@ -5,13 +5,17 @@ import { coursesApi, quizzesApi } from '../api/client';
 import { TrainerProfileSection } from '../components/TrainerProfileSection';
 import { TrainerCourseCompetencyModal } from '../components/TrainerCourseCompetencyModal';
 import { TrainerMatchingModal } from '../components/TrainerMatchingModal';
-import type { Course, Quiz, QuizResultsSummary } from '../types';
+import { TrainerCompletionModal } from '../components/TrainerCompletionModal';
+import { CertificateModal } from '../components/CertificateModal';
+import type { Course, Quiz, QuizResultsSummary, Certificate } from '../types';
 
 export const TrainerDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'courses' | 'quizzes' | 'profile'>('courses');
   const [activeCourseForCompetencies, setActiveCourseForCompetencies] = useState<Course | null>(null);
   const [activeCourseForMatching, setActiveCourseForMatching] = useState<Course | null>(null);
+  const [activeCourseForCertificates, setActiveCourseForCertificates] = useState<Course | null>(null);
+  const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
@@ -285,18 +289,24 @@ export const TrainerDashboard: React.FC = () => {
                           + Add Assessment
                         </button>
                       </div>
-                      <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                      <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800/60">
                         <button
                           onClick={() => setActiveCourseForCompetencies(course)}
-                          className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-semibold transition-all border border-slate-700 cursor-pointer"
+                          className="py-1.5 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-semibold transition-all border border-slate-700 cursor-pointer text-center truncate"
                         >
                           Prerequisites
                         </button>
                         <button
                           onClick={() => setActiveCourseForMatching(course)}
-                          className="flex-1 py-1.5 px-2 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 rounded-lg text-[11px] font-semibold transition-all border border-purple-800/80 cursor-pointer"
+                          className="py-1.5 px-1.5 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 rounded-lg text-[10px] font-semibold transition-all border border-purple-800/80 cursor-pointer text-center truncate"
                         >
-                          Match Trainers
+                          Matching
+                        </button>
+                        <button
+                          onClick={() => setActiveCourseForCertificates(course)}
+                          className="py-1.5 px-1.5 bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 rounded-lg text-[10px] font-semibold transition-all border border-indigo-800/80 cursor-pointer text-center truncate"
+                        >
+                          Certs 🏆
                         </button>
                       </div>
                     </div>
@@ -733,6 +743,21 @@ export const TrainerDashboard: React.FC = () => {
             onClose={() => setActiveCourseForMatching(null)}
           />
         )}
+
+        {/* Modal: Course Trainees Completion & Certification */}
+        {activeCourseForCertificates && (
+          <TrainerCompletionModal
+            course={activeCourseForCertificates}
+            onClose={() => setActiveCourseForCertificates(null)}
+            onViewCertificate={(cert) => setSelectedCertForModal(cert)}
+          />
+        )}
+
+        {/* Modal: Certificate Diploma & QR Preview */}
+        <CertificateModal
+          certificate={selectedCertForModal}
+          onClose={() => setSelectedCertForModal(null)}
+        />
       </main>
     </div>
   );

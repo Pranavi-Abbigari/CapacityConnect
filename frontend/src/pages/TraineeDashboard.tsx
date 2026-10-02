@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, quizzesApi } from '../api/client';
+import { coursesApi, quizzesApi, certificatesApi } from '../api/client';
 import { TraineeProfileSection } from '../components/TraineeProfileSection';
 import { TraineeSkillGapSection } from '../components/TraineeSkillGapSection';
-import type { Course, CourseEnrollment, Quiz, Attempt } from '../types';
+import { CertificateModal } from '../components/CertificateModal';
+import type { Course, CourseEnrollment, Quiz, Attempt, Certificate } from '../types';
 
 export const TraineeDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'my-courses' | 'catalog' | 'quizzes' | 'results' | 'profile' | 'skill-gap'>('my-courses');
+  const [activeTab, setActiveTab] = useState<'my-courses' | 'catalog' | 'quizzes' | 'results' | 'profile' | 'skill-gap' | 'certificates'>('my-courses');
   const [myEnrollments, setMyEnrollments] = useState<CourseEnrollment[]>([]);
   const [catalog, setCatalog] = useState<Course[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [myAttempts, setMyAttempts] = useState<Attempt[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [enrollingId, setEnrollingId] = useState<number | null>(null);
@@ -27,17 +30,19 @@ export const TraineeDashboard: React.FC = () => {
   const loadTraineeData = async () => {
     setLoading(true);
     try {
-      const [enrollments, allCourses, allQuizzes, attempts] = await Promise.all([
+      const [enrollments, allCourses, allQuizzes, attempts, myCerts] = await Promise.all([
         coursesApi.getMyEnrolledCourses().catch(() => []),
         coursesApi.getCourses().catch(() => []),
         quizzesApi.getQuizzes().catch(() => []),
         quizzesApi.getMyAttempts().catch(() => []),
+        certificatesApi.getMyCertificates().catch(() => []),
       ]);
 
       setMyEnrollments(enrollments);
       setCatalog(allCourses);
       setQuizzes(allQuizzes);
       setMyAttempts(attempts);
+      setCertificates(myCerts);
     } catch (err: unknown) {
       console.error('Failed to load trainee data', err);
     } finally {
@@ -129,6 +134,7 @@ export const TraineeDashboard: React.FC = () => {
     { id: 'catalog', label: `Available Courses (${catalog.length})` },
     { id: 'quizzes', label: `Assessments (${quizzes.length})` },
     { id: 'results', label: `My Scores (${myAttempts.length})` },
+    { id: 'certificates', label: `Certificates (${certificates.length})` },
     { id: 'profile', label: 'My Profile & Skills' },
     { id: 'skill-gap', label: 'Skill Gap & Recommendations' },
   ];
@@ -226,9 +232,15 @@ export const TraineeDashboard: React.FC = () => {
                     <div>
                       <div className="flex items-center justify-between mb-3 text-[10px] text-slate-400">
                         <span className="font-mono">Course #{enr.course_id}</span>
-                        <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                          Active Learner
-                        </span>
+                        {enr.completed_at ? (
+                          <span className="px-2 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-700 shadow-xs">
+                            Completed 🎉
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                            Active Learner
+                          </span>
+                        )}
                       </div>
                       <h4 className="text-lg font-bold text-white leading-snug">
                         {enr.course?.title || `Module #${enr.course_id}`}
@@ -240,14 +252,31 @@ export const TraineeDashboard: React.FC = () => {
 
                     <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
                       <span className="text-[10px] text-slate-500">
-                        Enrolled {new Date(enr.enrolled_at).toLocaleDateString()}
+                        {enr.completed_at
+                          ? `Completed ${new Date(enr.completed_at).toLocaleDateString()}`
+                          : `Enrolled ${new Date(enr.enrolled_at).toLocaleDateString()}`}
                       </span>
-                      <button
-                        onClick={() => setActiveTab('quizzes')}
-                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
-                      >
-                        Take Quizzes →
-                      </button>
+                      {(() => {
+                        const cert = certificates.find((c) => c.course_id === enr.course_id);
+                        if (cert) {
+                          return (
+                            <button
+                              onClick={() => setSelectedCertForModal(cert)}
+                              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer flex items-center gap-1"
+                            >
+                              <span>🏆 View Certificate</span>
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            onClick={() => setActiveTab('quizzes')}
+                            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                          >
+                            Take Quizzes →
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
@@ -580,7 +609,119 @@ export const TraineeDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Tab: Earned Certificates */}
+        {activeTab === 'certificates' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">Earned Certificates & Credentials</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tamper-proof verifiable credentials awarded upon achieving course completion criteria.
+                </p>
+              </div>
+              <a
+                href="/verify-certificate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <span>Public Verification Registry ↗</span>
+              </a>
+            </div>
+
+            {loading ? (
+              <div className="py-12 text-center text-slate-500 text-xs">Loading certificates...</div>
+            ) : certificates.length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center">
+                <span className="text-4xl block mb-2">🏆</span>
+                <p className="text-sm font-semibold text-slate-300">No Certificates Earned Yet</p>
+                <p className="text-xs text-slate-500 mt-1 mb-4 max-w-md mx-auto">
+                  Satisfy all course assessment requirements with passing grades to earn official accredited certificates.
+                </p>
+                <button
+                  onClick={() => setActiveTab('my-courses')}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-md shadow-indigo-600/30 transition-all"
+                >
+                  Continue Coursework
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {certificates.map((cert) => (
+                  <div
+                    key={cert.id}
+                    className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between relative overflow-hidden group hover:border-indigo-500/40 transition-all"
+                  >
+                    <div>
+                      {/* Top Header Badge */}
+                      <div className="flex items-center justify-between mb-3 text-[10px]">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full font-bold border ${
+                            cert.status === 'ACTIVE'
+                              ? 'bg-emerald-950/70 text-emerald-300 border-emerald-800'
+                              : 'bg-rose-950/70 text-rose-300 border-rose-800'
+                          }`}
+                        >
+                          ● {cert.status}
+                        </span>
+                        <span className="font-mono text-indigo-400 font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                          {cert.certificate_code}
+                        </span>
+                      </div>
+
+                      <h4 className="text-lg font-bold text-white leading-snug group-hover:text-indigo-300 transition-colors">
+                        {cert.course_title || `Course #${cert.course_id}`}
+                      </h4>
+
+                      <div className="mt-4 p-3 bg-slate-800/40 border border-slate-800 rounded-xl space-y-1 text-xs">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-slate-400">Awarded To:</span>
+                          <span className="text-slate-200 font-medium">{cert.trainee_name}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-slate-400">Issued On:</span>
+                          <span className="text-slate-200">
+                            {new Date(cert.issue_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-slate-400">Grade Standing:</span>
+                          <span className="text-emerald-400 font-bold">{cert.grade || 'Pass'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => setSelectedCertForModal(cert)}
+                        className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/25 transition-all cursor-pointer text-center"
+                      >
+                        View Diploma & QR
+                      </button>
+                      <a
+                        href={`/verify-certificate?code=${cert.certificate_code}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all text-center"
+                      >
+                        Verify ↗
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Certificate Modal */}
+      <CertificateModal
+        certificate={selectedCertForModal}
+        onClose={() => setSelectedCertForModal(null)}
+      />
     </div>
   );
 };

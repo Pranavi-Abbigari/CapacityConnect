@@ -7,6 +7,8 @@ from routers.competencies import router as competencies_router
 from routers.certificates import router as certificates_router
 from routers.notifications import router as notifications_router
 from routers.analytics import router as analytics_router
+from routers.feedback import router as feedback_router
+from routers.announcements import router as announcements_router
 
 __all__ = [
     "auth_router",
@@ -18,5 +20,8 @@ __all__ = [
     "certificates_router",
     "notifications_router",
     "analytics_router",
+    "feedback_router",
+    "announcements_router",
     "seed_initial_skills",
 ]
+

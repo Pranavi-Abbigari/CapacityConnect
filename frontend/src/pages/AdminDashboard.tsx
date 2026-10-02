@@ -4,20 +4,26 @@ import { adminApi, coursesApi, certificatesApi } from '../api/client';
 import { AdminUserProfileModal } from '../components/AdminUserProfileModal';
 import { CertificateModal } from '../components/CertificateModal';
 import { AdminAnalyticsSection } from '../components/AdminAnalyticsSection';
+import { AnnouncementModal } from '../components/AnnouncementModal';
+import { AnnouncementFeed } from '../components/AnnouncementFeed';
+import { CourseFeedbackListModal } from '../components/CourseFeedbackListModal';
 import type { User, Course, Certificate } from '../types';
 
 export const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'courses' | 'certificates'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'courses' | 'certificates' | 'announcements'>('overview');
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
+  const [selectedCourseForReviews, setSelectedCourseForReviews] = useState<Course | null>(null);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState<boolean>(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [inspectingUserId, setInspectingUserId] = useState<number | null>(null);
+
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -86,6 +92,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'users', label: 'User Directory' },
     { id: 'courses', label: 'Course Catalog' },
     { id: 'certificates', label: `Certificates (${certificates.length})` },
+    { id: 'announcements', label: '📢 Announcements' },
   ];
 
   return (
@@ -114,14 +121,23 @@ export const AdminDashboard: React.FC = () => {
               Oversee capacity building metrics, manage user approval pipelines, and govern courses.
             </p>
           </div>
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer self-start md:self-auto"
-          >
-            {loading ? 'Refreshing...' : '↻ Refresh Data'}
-          </button>
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <button
+              onClick={() => setIsAnnouncementModalOpen(true)}
+              className="px-4 py-2 bg-linear-to-r from-rose-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+            >
+              📢 Broadcast
+            </button>
+            <button
+              onClick={fetchDashboardData}
+              disabled={loading}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
+            >
+              {loading ? 'Refreshing...' : '↻ Refresh'}
+            </button>
+          </div>
         </div>
+
 
         {feedback && (
           <div
@@ -365,10 +381,17 @@ export const AdminDashboard: React.FC = () => {
                         {course.description || 'No description provided.'}
                       </p>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-700/40 text-[11px] text-slate-400">
-                      Trainer ID: <span className="font-mono text-slate-200">#{course.trainer_id}</span>
+                    <div className="mt-4 pt-3 border-t border-slate-700/40 flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Trainer ID: <span className="font-mono text-slate-200">#{course.trainer_id}</span></span>
+                      <button
+                        onClick={() => setSelectedCourseForReviews(course)}
+                        className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                      >
+                        ⭐ Reviews
+                      </button>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
@@ -490,6 +513,16 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 6: Announcements Broadcast Center */}
+        {activeTab === 'announcements' && (
+          <div className="space-y-6">
+            <AnnouncementFeed
+              canCreate={true}
+              onNewAnnouncementClick={() => setIsAnnouncementModalOpen(true)}
+            />
+          </div>
+        )}
+
         {/* Modal: Admin User Profile & Competencies Audit */}
         {inspectingUserId && (
           <AdminUserProfileModal
@@ -503,7 +536,29 @@ export const AdminDashboard: React.FC = () => {
           certificate={selectedCertForModal}
           onClose={() => setSelectedCertForModal(null)}
         />
+
+        {/* Modal: Course Reviews Audit */}
+        {selectedCourseForReviews && (
+          <CourseFeedbackListModal
+            courseId={selectedCourseForReviews.id}
+            courseTitle={selectedCourseForReviews.title}
+            onClose={() => setSelectedCourseForReviews(null)}
+          />
+        )}
+
+        {/* Modal: Broadcast Announcement */}
+        {isAnnouncementModalOpen && (
+          <AnnouncementModal
+            userRole="ADMIN"
+            availableCourses={courses}
+            onClose={() => setIsAnnouncementModalOpen(false)}
+            onSuccess={() => {
+              setFeedback({ text: 'Institutional announcement broadcasted successfully!', type: 'success' });
+            }}
+          />
+        )}
       </main>
     </div>
   );
 };
+

@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
-import { coursesApi, quizzesApi, certificatesApi } from '../api/client';
+import { coursesApi, quizzesApi, certificatesApi, notificationsApi } from '../api/client';
 import { TraineeProfileSection } from '../components/TraineeProfileSection';
 import { TraineeSkillGapSection } from '../components/TraineeSkillGapSection';
 import { CertificateModal } from '../components/CertificateModal';
+import { CourseFeedbackModal } from '../components/CourseFeedbackModal';
+import { AnnouncementFeed } from '../components/AnnouncementFeed';
 import type { Course, CourseEnrollment, Quiz, Attempt, Certificate } from '../types';
 
 export const TraineeDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'my-courses' | 'catalog' | 'quizzes' | 'results' | 'profile' | 'skill-gap' | 'certificates'>('my-courses');
+  const [activeTab, setActiveTab] = useState<'my-courses' | 'catalog' | 'quizzes' | 'results' | 'profile' | 'skill-gap' | 'certificates' | 'announcements'>('my-courses');
   const [myEnrollments, setMyEnrollments] = useState<CourseEnrollment[]>([]);
   const [catalog, setCatalog] = useState<Course[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [myAttempts, setMyAttempts] = useState<Attempt[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
+  const [feedbackCourseModal, setFeedbackCourseModal] = useState<{ courseId: number; courseTitle: string; trainerId?: number } | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [enrollingId, setEnrollingId] = useState<number | null>(null);
 
@@ -43,12 +47,16 @@ export const TraineeDashboard: React.FC = () => {
       setQuizzes(allQuizzes);
       setMyAttempts(attempts);
       setCertificates(myCerts);
+
+      // Check deadlines in background
+      notificationsApi.checkDeadlines().catch(() => {});
     } catch (err: unknown) {
       console.error('Failed to load trainee data', err);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     loadTraineeData();
@@ -135,7 +143,9 @@ export const TraineeDashboard: React.FC = () => {
     { id: 'quizzes', label: `Assessments (${quizzes.length})` },
     { id: 'results', label: `My Scores (${myAttempts.length})` },
     { id: 'certificates', label: `Certificates (${certificates.length})` },
+    { id: 'announcements', label: '📢 Announcements' },
     { id: 'profile', label: 'My Profile & Skills' },
+
     { id: 'skill-gap', label: 'Skill Gap & Recommendations' },
   ];
 
@@ -256,29 +266,43 @@ export const TraineeDashboard: React.FC = () => {
                           ? `Completed ${new Date(enr.completed_at).toLocaleDateString()}`
                           : `Enrolled ${new Date(enr.enrolled_at).toLocaleDateString()}`}
                       </span>
-                      {(() => {
-                        const cert = certificates.find((c) => c.course_id === enr.course_id);
-                        if (cert) {
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setFeedbackCourseModal({
+                            courseId: enr.course_id,
+                            courseTitle: enr.course?.title || `Course #${enr.course_id}`,
+                            trainerId: enr.course?.trainer_id,
+                          })}
+                          title="Evaluate course & instructor"
+                          className="text-xs font-semibold text-amber-400 hover:text-amber-300 cursor-pointer flex items-center gap-1"
+                        >
+                          <span>⭐ Review</span>
+                        </button>
+                        {(() => {
+                          const cert = certificates.find((c) => c.course_id === enr.course_id);
+                          if (cert) {
+                            return (
+                              <button
+                                onClick={() => setSelectedCertForModal(cert)}
+                                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer flex items-center gap-1"
+                              >
+                                <span>🏆 Diploma</span>
+                              </button>
+                            );
+                          }
                           return (
                             <button
-                              onClick={() => setSelectedCertForModal(cert)}
-                              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer flex items-center gap-1"
+                              onClick={() => setActiveTab('quizzes')}
+                              className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
                             >
-                              <span>🏆 View Certificate</span>
+                              Take Quizzes →
                             </button>
                           );
-                        }
-                        return (
-                          <button
-                            onClick={() => setActiveTab('quizzes')}
-                            className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
-                          >
-                            Take Quizzes →
-                          </button>
-                        );
-                      })()}
+                        })()}
+                      </div>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
@@ -715,6 +739,13 @@ export const TraineeDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Tab 8: Announcements */}
+        {activeTab === 'announcements' && (
+          <div className="space-y-6">
+            <AnnouncementFeed canCreate={false} />
+          </div>
+        )}
       </main>
 
       {/* Certificate Modal */}
@@ -722,6 +753,17 @@ export const TraineeDashboard: React.FC = () => {
         certificate={selectedCertForModal}
         onClose={() => setSelectedCertForModal(null)}
       />
+
+      {/* Course Feedback Modal */}
+      {feedbackCourseModal && (
+        <CourseFeedbackModal
+          courseId={feedbackCourseModal.courseId}
+          courseTitle={feedbackCourseModal.courseTitle}
+          trainerId={feedbackCourseModal.trainerId}
+          onClose={() => setFeedbackCourseModal(null)}
+        />
+      )}
     </div>
   );
 };
+

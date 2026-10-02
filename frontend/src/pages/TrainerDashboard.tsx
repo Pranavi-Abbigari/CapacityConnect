@@ -7,19 +7,26 @@ import { TrainerCourseCompetencyModal } from '../components/TrainerCourseCompete
 import { TrainerMatchingModal } from '../components/TrainerMatchingModal';
 import { TrainerCompletionModal } from '../components/TrainerCompletionModal';
 import { CertificateModal } from '../components/CertificateModal';
+import { CourseFeedbackListModal } from '../components/CourseFeedbackListModal';
+import { AnnouncementModal } from '../components/AnnouncementModal';
+import { AnnouncementFeed } from '../components/AnnouncementFeed';
 import type { Course, Quiz, QuizResultsSummary, Certificate } from '../types';
 
 export const TrainerDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'courses' | 'quizzes' | 'profile'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'quizzes' | 'announcements' | 'profile'>('courses');
   const [activeCourseForCompetencies, setActiveCourseForCompetencies] = useState<Course | null>(null);
   const [activeCourseForMatching, setActiveCourseForMatching] = useState<Course | null>(null);
   const [activeCourseForCertificates, setActiveCourseForCertificates] = useState<Course | null>(null);
+  const [activeCourseForReviews, setActiveCourseForReviews] = useState<Course | null>(null);
   const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [announcementCourseId, setAnnouncementCourseId] = useState<number | undefined>(undefined);
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
 
   // Modal states
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -167,8 +174,10 @@ export const TrainerDashboard: React.FC = () => {
   const navTabs = [
     { id: 'courses', label: `My Courses (${myCourses.length})` },
     { id: 'quizzes', label: `Assessments & Quizzes (${quizzes.length})` },
+    { id: 'announcements', label: '📢 Announcements' },
     { id: 'profile', label: 'Expertise & Profile' },
   ];
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -309,8 +318,26 @@ export const TrainerDashboard: React.FC = () => {
                           Certs 🏆
                         </button>
                       </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          onClick={() => setActiveCourseForReviews(course)}
+                          className="py-1.5 px-2 bg-amber-950/50 hover:bg-amber-900/50 text-amber-300 rounded-lg text-[10px] font-semibold transition-all border border-amber-800/70 cursor-pointer text-center truncate"
+                        >
+                          Reviews ⭐
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAnnouncementCourseId(course.id);
+                            setIsAnnouncementModalOpen(true);
+                          }}
+                          className="py-1.5 px-2 bg-rose-950/50 hover:bg-rose-900/50 text-rose-300 rounded-lg text-[10px] font-semibold transition-all border border-rose-800/70 cursor-pointer text-center truncate"
+                        >
+                          Announce 📢
+                        </button>
+                      </div>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
@@ -399,10 +426,24 @@ export const TrainerDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab: Announcements */}
+        {activeTab === 'announcements' && (
+          <div className="space-y-6">
+            <AnnouncementFeed
+              canCreate={true}
+              onNewAnnouncementClick={() => {
+                setAnnouncementCourseId(undefined);
+                setIsAnnouncementModalOpen(true);
+              }}
+            />
+          </div>
+        )}
+
         {/* Tab 3: Expertise & Profile */}
         {activeTab === 'profile' && (
           <TrainerProfileSection onProfileUpdated={loadData} />
         )}
+
 
         {/* Modal: Create Course */}
         {isCourseModalOpen && (
@@ -758,7 +799,30 @@ export const TrainerDashboard: React.FC = () => {
           certificate={selectedCertForModal}
           onClose={() => setSelectedCertForModal(null)}
         />
+
+        {/* Modal: Course Reviews & Ratings */}
+        {activeCourseForReviews && (
+          <CourseFeedbackListModal
+            courseId={activeCourseForReviews.id}
+            courseTitle={activeCourseForReviews.title}
+            onClose={() => setActiveCourseForReviews(null)}
+          />
+        )}
+
+        {/* Modal: Create Announcement */}
+        {isAnnouncementModalOpen && (
+          <AnnouncementModal
+            userRole="TRAINER"
+            availableCourses={myCourses}
+            defaultCourseId={announcementCourseId}
+            onClose={() => setIsAnnouncementModalOpen(false)}
+            onSuccess={() => {
+              setMessage({ text: 'Announcement published successfully!', type: 'success' });
+            }}
+          />
+        )}
       </main>
     </div>
   );
 };
+

@@ -373,3 +373,72 @@ export interface InstitutionalAnalytics {
   trainer_performance: TrainerPerformanceMetric[];
 }
 
+// Phase 6: Feedback & Announcements Types
+export interface CourseFeedback {
+  id: number;
+  course_id: number;
+  trainee_id: number;
+  trainee_name?: string;
+  rating: number;
+  comment?: string | null;
+  created_at: string;
+}
+
+export interface CourseFeedbackSummary {
+  course_id: number;
+  course_title?: string;
+  average_rating: number;
+  total_reviews: number;
+  reviews: CourseFeedback[];
+}
+
+export interface TrainerFeedback {
+  id: number;
+  trainer_id: number;
+  trainer_name?: string;
+  trainee_id: number;
+  trainee_name?: string;
+  course_id: number;
+  course_title?: string;
+  rating: number;
+  comment?: string | null;
+  created_at: string;
+}
+
+export interface TrainerFeedbackSummary {
+  trainer_id: number;
+  trainer_name?: string;
+  average_rating: number;
+  total_reviews: number;
+  reviews: TrainerFeedback[];
+}
+
+export interface MyFeedbackSubmissions {
+  course_feedbacks: CourseFeedback[];
+  trainer_feedbacks: TrainerFeedback[];
+}
+
+export interface Announcement {
+  id: number;
+  author_id: number;
+  author_name?: string;
+  author_role?: string;
+  course_id?: number | null;
+  course_title?: string | null;
+  title: string;
+  content: string;
+  created_at: string;
+}
+
+export interface DeadlineCheckResult {
+  message: string;
+  reminders_created: number;
+  reminders: Array<{
+    quiz_id: number;
+    quiz_title: string;
+    deadline: string;
+    notification_id: number;
+  }>;
+}
+
+

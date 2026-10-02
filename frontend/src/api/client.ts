@@ -24,7 +24,15 @@ import type {
   CourseCompletionStatus,
   TraineeCompletionSummary,
   InstitutionalAnalytics,
+  CourseFeedback,
+  CourseFeedbackSummary,
+  TrainerFeedback,
+  TrainerFeedbackSummary,
+  MyFeedbackSubmissions,
+  Announcement,
+  DeadlineCheckResult,
 } from '../types';
+
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -360,7 +368,7 @@ export const certificatesApi = {
     apiRequest<CertificateVerification>(`/api/certificates/verify/${encodeURIComponent(certificateCode)}`),
 };
 
-// Phase 4: Notifications APIs
+// Phase 4 & 6: Notifications APIs
 export const notificationsApi = {
   getNotifications: () =>
     apiRequest<AppNotification[]>('/api/notifications'),
@@ -377,7 +385,49 @@ export const notificationsApi = {
     apiRequest<{ message: string }>('/api/notifications/mark-all-read', {
       method: 'POST',
     }),
+
+  checkDeadlines: () =>
+    apiRequest<DeadlineCheckResult>('/api/notifications/check-deadlines', {
+      method: 'POST',
+    }),
 };
+
+// Phase 6: Feedback APIs
+export const feedbackApi = {
+  submitCourseFeedback: (payload: { course_id: number; rating: number; comment?: string }) =>
+    apiRequest<CourseFeedback>('/api/feedback/courses', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getCourseFeedback: (courseId: number) =>
+    apiRequest<CourseFeedbackSummary>(`/api/feedback/courses/${courseId}`),
+
+  submitTrainerFeedback: (payload: { trainer_id: number; course_id: number; rating: number; comment?: string }) =>
+    apiRequest<TrainerFeedback>('/api/feedback/trainers', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTrainerFeedback: (trainerId: number) =>
+    apiRequest<TrainerFeedbackSummary>(`/api/feedback/trainers/${trainerId}`),
+
+  getMySubmissions: () =>
+    apiRequest<MyFeedbackSubmissions>('/api/feedback/my-submissions'),
+};
+
+// Phase 6: Announcements APIs
+export const announcementsApi = {
+  createAnnouncement: (payload: { title: string; content: string; course_id?: number | null }) =>
+    apiRequest<Announcement>('/api/announcements', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getAnnouncements: () =>
+    apiRequest<Announcement[]>('/api/announcements'),
+};
+
 
 // Phase 5: Admin Analytics & Institutional Reports APIs
 async function downloadCsvBlob(endpoint: string, defaultFilename: string): Promise<Blob> {

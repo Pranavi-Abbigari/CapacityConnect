@@ -5,6 +5,8 @@ from models.quiz import Quiz, Question, Attempt, AttemptDetail
 from models.profile import Skill, UserSkill, TraineeProfile, TrainerProfile, ProficiencyLevel, CourseCompetency
 from models.certificate import Certificate, CertificateStatus
 from models.notification import Notification
+from models.feedback import CourseFeedback, TrainerFeedback
+from models.announcement import Announcement
 
 __all__ = [
     "Base",
@@ -27,4 +29,8 @@ __all__ = [
     "Certificate",
     "CertificateStatus",
     "Notification",
+    "CourseFeedback",
+    "TrainerFeedback",
+    "Announcement",
 ]
+

@@ -6,8 +6,10 @@ from models.user import User
 from models.notification import Notification
 from schemas.notification import NotificationResponse, UnreadCountResponse
 from security import get_current_user
+from services.deadline_service import check_and_create_deadline_notifications
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+
 
 
 @router.get("", response_model=List[NotificationResponse])
@@ -67,3 +69,17 @@ def mark_all_notifications_as_read(
     ).update({"is_read": True})
     db.commit()
     return {"message": "All notifications marked as read"}
+
+
+@router.post("/check-deadlines")
+def check_user_deadlines(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    reminders = check_and_create_deadline_notifications(db, user_id=current_user.id)
+    return {
+        "message": "Deadlines checked successfully",
+        "reminders_created": len(reminders),
+        "reminders": reminders
+    }
+

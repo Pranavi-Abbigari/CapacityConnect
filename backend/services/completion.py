@@ -122,6 +122,27 @@ def evaluate_and_update_course_completion(
             link="/trainee?tab=my-courses"
         )
 
+        # Milestone Achievement: First Course Completed (deduplicated)
+        total_completed = db.query(CourseEnrollment).filter(
+            CourseEnrollment.trainee_id == trainee_id,
+            CourseEnrollment.completed_at.isnot(None)
+        ).count()
+        if total_completed == 1:
+            existing_first = db.query(Notification).filter(
+                Notification.user_id == trainee_id,
+                Notification.link.like("%achievement_first_course%")
+            ).first()
+            if not existing_first:
+                create_notification(
+                    db,
+                    user_id=trainee_id,
+                    title="🎓 Milestone: First Course Completed!",
+                    message=f"You successfully completed your first course: '{course_title}'! Outstanding achievement!",
+                    type="ACHIEVEMENT",
+                    link="/trainee?tab=my-courses#achievement_first_course"
+                )
+
+
     is_completed = (enrollment.completed_at is not None) or is_satisfied
 
     return {

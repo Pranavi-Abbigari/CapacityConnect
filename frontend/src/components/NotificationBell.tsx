@@ -83,14 +83,23 @@ export const NotificationBell: React.FC = () => {
     switch (type) {
       case 'CERTIFICATE':
         return '🏆';
+      case 'ACHIEVEMENT':
+        return '🎯';
       case 'SUCCESS':
         return '🎉';
+      case 'DEADLINE':
+        return '⏰';
+      case 'ANNOUNCEMENT':
+        return '📢';
+      case 'FEEDBACK':
+        return '⭐';
       case 'ALERT':
         return '⚠️';
       default:
         return 'ℹ️';
     }
   };
+
 
   return (
     <div className="relative" ref={dropdownRef}>

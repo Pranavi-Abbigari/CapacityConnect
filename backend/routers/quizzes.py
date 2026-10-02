@@ -5,6 +5,7 @@ from database import get_db
 from models.user import User
 from models.course import Course
 from models.quiz import Quiz, Question, Attempt, AttemptDetail
+from models.notification import Notification
 from schemas.quiz import (
     QuizCreate,
     QuizResponse,
@@ -15,7 +16,8 @@ from schemas.quiz import (
     QuizResultsSummaryResponse,
 )
 from security import require_trainer, require_trainee, get_current_user
-from services.completion import evaluate_and_update_course_completion
+from services.completion import evaluate_and_update_course_completion, create_notification
+
 
 router = APIRouter(prefix="/api", tags=["quizzes"])
 
@@ -160,6 +162,23 @@ def submit_quiz(
     db.commit()
     db.refresh(new_attempt)
 
+    # Achievement: Perfect Quiz Score (deduplicated)
+    if score_percentage >= 100.0:
+        link_tag = f"/trainee?tab=quizzes#achievement_perfect_quiz_{quiz.id}"
+        existing_achieve = db.query(Notification).filter(
+            Notification.user_id == current_user.id,
+            Notification.link.like(f"%achievement_perfect_quiz_{quiz.id}%")
+        ).first()
+        if not existing_achieve:
+            create_notification(
+                db,
+                user_id=current_user.id,
+                title="🏆 Perfect Quiz Score",
+                message=f"You scored 100% in '{quiz.title}'. Outstanding work!",
+                type="ACHIEVEMENT",
+                link=link_tag
+            )
+
     # Check and update course completion if all quizzes are passed
     try:
         evaluate_and_update_course_completion(db, course_id=quiz.course_id, trainee_id=current_user.id)
@@ -167,6 +186,7 @@ def submit_quiz(
         print(f"Error evaluating completion on submit: {e}")
 
     return new_attempt
+
 
 
 @router.get("/trainee/my-attempts", response_model=List[AttemptResponse])

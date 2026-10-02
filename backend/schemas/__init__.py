@@ -46,6 +46,19 @@ from schemas.analytics import (
     TrainerPerformanceMetric,
     AdminAnalyticsOverviewResponse,
 )
+from schemas.feedback import (
+    CourseFeedbackCreate,
+    CourseFeedbackResponse,
+    CourseFeedbackSummaryResponse,
+    TrainerFeedbackCreate,
+    TrainerFeedbackResponse,
+    TrainerFeedbackSummaryResponse,
+    MyFeedbackSubmissionsResponse,
+)
+from schemas.announcement import (
+    AnnouncementCreate,
+    AnnouncementResponse,
+)
 
 __all__ = [
     "UserRole",
@@ -97,4 +110,14 @@ __all__ = [
     "SkillIntelligence",
     "TrainerPerformanceMetric",
     "AdminAnalyticsOverviewResponse",
+    "CourseFeedbackCreate",
+    "CourseFeedbackResponse",
+    "CourseFeedbackSummaryResponse",
+    "TrainerFeedbackCreate",
+    "TrainerFeedbackResponse",
+    "TrainerFeedbackSummaryResponse",
+    "MyFeedbackSubmissionsResponse",
+    "AnnouncementCreate",
+    "AnnouncementResponse",
 ]
+

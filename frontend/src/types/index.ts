@@ -312,3 +312,64 @@ export interface TraineeCompletionSummary {
   average_score?: number | null;
 }
 
+export interface AnalyticsKPIs {
+  total_users: number;
+  total_trainees: number;
+  total_trainers: number;
+  total_courses: number;
+  total_enrollments: number;
+  completed_enrollments: number;
+  overall_completion_rate: number;
+  total_quizzes: number;
+  total_attempts: number;
+  platform_average_quiz_score: number;
+  total_certificates_issued: number;
+  active_certificates: number;
+  revoked_certificates: number;
+}
+
+export interface CourseCompletionMetric {
+  course_id: number;
+  course_title: string;
+  trainer_name: string;
+  total_enrolled: number;
+  completed_count: number;
+  completion_rate: number;
+  average_quiz_score: number;
+}
+
+export interface SkillAcquisitionItem {
+  skill_id: number;
+  skill_name: string;
+  category?: string | null;
+  learner_count: number;
+}
+
+export interface SkillGapMetricItem {
+  skill_id: number;
+  skill_name: string;
+  gap_count: number;
+}
+
+export interface SkillIntelligence {
+  most_acquired_skills: SkillAcquisitionItem[];
+  top_skill_gaps: SkillGapMetricItem[];
+}
+
+export interface TrainerPerformanceMetric {
+  trainer_id: number;
+  trainer_name: string;
+  total_courses: number;
+  total_students: number;
+  average_student_score: number;
+  completion_rate: number;
+}
+
+export interface InstitutionalAnalytics {
+  kpis: AnalyticsKPIs;
+  completion_metrics: CourseCompletionMetric[];
+  grade_distribution: Record<string, number>;
+  skill_intelligence: SkillIntelligence;
+  trainer_performance: TrainerPerformanceMetric[];
+}
+

@@ -38,6 +38,14 @@ from schemas.competency import (
     TrainerMatchItem,
     CourseTrainerMatchingResponse,
 )
+from schemas.analytics import (
+    AnalyticsKPIs,
+    CourseCompletionMetric,
+    SkillAcquisitionItem,
+    SkillIntelligence,
+    TrainerPerformanceMetric,
+    AdminAnalyticsOverviewResponse,
+)
 
 __all__ = [
     "UserRole",
@@ -83,4 +91,10 @@ __all__ = [
     "TrainerCompetencyCoverage",
     "TrainerMatchItem",
     "CourseTrainerMatchingResponse",
+    "AnalyticsKPIs",
+    "CourseCompletionMetric",
+    "SkillAcquisitionItem",
+    "SkillIntelligence",
+    "TrainerPerformanceMetric",
+    "AdminAnalyticsOverviewResponse",
 ]

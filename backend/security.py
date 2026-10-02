@@ -1,3 +1,4 @@
+import os
 import bcrypt
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -7,9 +8,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User, UserRole, UserStatus
 
-SECRET_KEY = "capacityconnect_secret_key_change_in_production"
+SECRET_KEY = os.getenv("SECRET_KEY", "capacityconnect_secret_key_change_in_production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 

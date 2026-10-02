@@ -23,6 +23,7 @@ import type {
   AppNotification,
   CourseCompletionStatus,
   TraineeCompletionSummary,
+  InstitutionalAnalytics,
 } from '../types';
 
 export const API_BASE_URL =
@@ -376,5 +377,45 @@ export const notificationsApi = {
     apiRequest<{ message: string }>('/api/notifications/mark-all-read', {
       method: 'POST',
     }),
+};
+
+// Phase 5: Admin Analytics & Institutional Reports APIs
+async function downloadCsvBlob(endpoint: string, defaultFilename: string): Promise<Blob> {
+  const token = localStorage.getItem('access_token');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to download report' }));
+    throw new Error(err.detail || 'Failed to download report');
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = defaultFilename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+  return blob;
+}
+
+export const analyticsApi = {
+  getInstitutionalAnalytics: () =>
+    apiRequest<InstitutionalAnalytics>('/api/admin/analytics/overview'),
+
+  downloadEnrollmentsCsv: () =>
+    downloadCsvBlob('/api/admin/reports/enrollments/csv', 'enrollments_report.csv'),
+
+  downloadCertificatesCsv: () =>
+    downloadCsvBlob('/api/admin/reports/certificates/csv', 'certificates_report.csv'),
+
+  downloadCoursesCsv: () =>
+    downloadCsvBlob('/api/admin/reports/courses-performance/csv', 'courses_performance_report.csv'),
 };
 

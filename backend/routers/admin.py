@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
@@ -9,6 +10,8 @@ from models.quiz import Attempt
 from schemas.auth import UserResponse
 from schemas.admin import AdminDashboardResponse
 from security import require_admin, oauth2_scheme, get_current_user
+
+ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin_secret_key")
 
 
 class ApproveUserRequest(BaseModel):
@@ -27,7 +30,7 @@ def verify_admin_authority(
         user = get_current_user(token=token, db=db)
         require_admin(current_user=user)
         return True
-    if x_admin_secret == "admin_secret_key":
+    if x_admin_secret == ADMIN_SECRET_KEY:
         return True
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

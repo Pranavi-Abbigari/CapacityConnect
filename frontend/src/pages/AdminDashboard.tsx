@@ -3,11 +3,11 @@ import { Navbar } from '../components/Navbar';
 import { adminApi, coursesApi, certificatesApi } from '../api/client';
 import { AdminUserProfileModal } from '../components/AdminUserProfileModal';
 import { CertificateModal } from '../components/CertificateModal';
-import type { AdminDashboardData, User, Course, Certificate } from '../types';
+import { AdminAnalyticsSection } from '../components/AdminAnalyticsSection';
+import type { User, Course, Certificate } from '../types';
 
 export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'courses' | 'certificates'>('overview');
-  const [stats, setStats] = useState<AdminDashboardData | null>(null);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -22,15 +22,13 @@ export const AdminDashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [dashStats, pending, users, courseList, certList] = await Promise.all([
-        adminApi.getDashboard().catch(() => null),
+      const [pending, users, courseList, certList] = await Promise.all([
         adminApi.getPendingUsers().catch(() => []),
         adminApi.getAllUsers().catch(() => []),
         coursesApi.getCourses().catch(() => []),
         certificatesApi.getAdminCertificates().catch(() => []),
       ]);
 
-      if (dashStats) setStats(dashStats);
       setPendingUsers(pending);
       setAllUsers(users);
       setCourses(courseList);
@@ -140,44 +138,8 @@ export const AdminDashboard: React.FC = () => {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            {/* Metric Cards Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Users</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_users : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Registered in DB</span>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Trainees</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_trainees : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Learners enrolled</span>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">Trainers</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_trainers : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Instructors on-board</span>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">Courses</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_courses : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Active curriculum</span>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">Enrollments</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_enrollments : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Course connections</span>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">Quiz Attempts</span>
-                <p className="text-3xl font-black text-white mt-2">{stats ? stats.total_attempts : '—'}</p>
-                <span className="text-[10px] text-slate-500 mt-1 block">Assessments taken</span>
-              </div>
-            </div>
+            {/* Phase 5: Institutional Analytics & Reports */}
+            <AdminAnalyticsSection />
 
             {/* Quick Action Panels */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from schemas.auth import UserResponse
@@ -19,8 +19,7 @@ class QuestionResponse(BaseModel):
     correct_index: Optional[int] = None
     explanation: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuizCreate(BaseModel):
@@ -37,8 +36,7 @@ class QuizResponse(BaseModel):
     created_at: datetime
     questions: List[QuestionResponse] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AnswerSubmit(BaseModel):
@@ -56,8 +54,7 @@ class AttemptDetailResponse(BaseModel):
     selected_index: int
     is_correct: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AttemptResponse(BaseModel):
@@ -70,8 +67,7 @@ class AttemptResponse(BaseModel):
     quiz: Optional[QuizResponse] = None
     trainee: Optional[UserResponse] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class QuizResultsSummaryResponse(BaseModel):

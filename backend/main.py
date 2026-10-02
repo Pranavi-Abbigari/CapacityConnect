@@ -11,6 +11,7 @@ from routers import (
     competencies_router,
     certificates_router,
     notifications_router,
+    analytics_router,
     seed_initial_skills,
 )
 
@@ -44,6 +45,7 @@ app.include_router(profiles_router)
 app.include_router(competencies_router)
 app.include_router(certificates_router)
 app.include_router(notifications_router)
+app.include_router(analytics_router)
 
 
 @app.get("/")

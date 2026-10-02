@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 from typing import Optional
 from datetime import datetime
@@ -23,8 +23,7 @@ class CourseResponse(BaseModel):
     status: CourseStatus
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EnrollmentResponse(BaseModel):
@@ -35,5 +34,4 @@ class EnrollmentResponse(BaseModel):
     completed_at: Optional[datetime] = None
     course: Optional[CourseResponse] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

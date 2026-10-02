@@ -47,9 +47,11 @@ export const SignupPage: React.FC = () => {
 
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-xl shadow-indigo-600/30">
-            <span className="text-white font-black text-2xl">LB</span>
-          </div>
+          <img
+            src="/learnbridge-logo.png"
+            alt="LearnBridge Logo"
+            className="w-16 h-16 mx-auto mb-3 object-contain rounded-2xl"
+          />
           <h1 className="text-2xl font-extrabold text-white tracking-tight">Create Account</h1>
           <p className="text-slate-400 text-xs mt-1">Join the LearnBridge Capacity Portal</p>
         </div>

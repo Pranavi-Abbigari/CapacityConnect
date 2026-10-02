@@ -56,9 +56,11 @@ export const VerifyCertificatePage: React.FC = () => {
       {/* Top Bar */}
       <header className="max-w-4xl mx-auto w-full flex items-center justify-between py-4 border-b border-slate-800 relative z-10">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <span className="text-white font-extrabold text-xl">LB</span>
-          </div>
+          <img
+            src="/learnbridge-logo.png"
+            alt="LearnBridge Logo"
+            className="w-10 h-10 object-contain rounded-xl"
+          />
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">LearnBridge</h1>
             <p className="text-[10px] text-slate-400">Public Credential Verification Registry</p>
@@ -90,7 +92,7 @@ export const VerifyCertificatePage: React.FC = () => {
         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            placeholder="Enter Certificate Code (e.g. CERT-CC-XXXX-XXXX)"
+            placeholder="Enter Certificate Code (e.g. CERT-XXXX-XXXX)"
             value={inputCode}
             onChange={(e) => setInputCode(e.target.value)}
             className="flex-1 px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"

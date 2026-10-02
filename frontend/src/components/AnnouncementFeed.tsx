@@ -15,6 +15,8 @@ export const AnnouncementFeed: React.FC<AnnouncementFeedProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [filter, setFilter] = useState<'ALL' | 'CAMPUS' | 'COURSE'>('ALL');
+
   const fetchAnnouncements = async () => {
     setLoading(true);
     setError(null);
@@ -32,10 +34,19 @@ export const AnnouncementFeed: React.FC<AnnouncementFeedProps> = ({
     fetchAnnouncements();
   }, []);
 
+  const filteredAnnouncements = announcements.filter((ann) => {
+    if (filter === 'CAMPUS') return !ann.course_id;
+    if (filter === 'COURSE') return !!ann.course_id;
+    return true;
+  });
+
+  const campusCount = announcements.filter((a) => !a.course_id).length;
+  const courseCount = announcements.filter((a) => !!a.course_id).length;
+
   return (
     <div className="space-y-4">
       {/* Header Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
             <span>📢</span> Campus & Course Announcements
@@ -45,7 +56,7 @@ export const AnnouncementFeed: React.FC<AnnouncementFeedProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={fetchAnnouncements}
             disabled={loading}
@@ -63,6 +74,40 @@ export const AnnouncementFeed: React.FC<AnnouncementFeedProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 pb-1 border-b border-slate-800/60 overflow-x-auto">
+        <button
+          onClick={() => setFilter('ALL')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            filter === 'ALL'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          All Announcements ({announcements.length})
+        </button>
+        <button
+          onClick={() => setFilter('CAMPUS')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            filter === 'CAMPUS'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          🌐 Campus Global ({campusCount})
+        </button>
+        <button
+          onClick={() => setFilter('COURSE')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+            filter === 'COURSE'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          📚 Course Specific ({courseCount})
+        </button>
       </div>
 
       {error && (
@@ -88,9 +133,24 @@ export const AnnouncementFeed: React.FC<AnnouncementFeedProps> = ({
         </div>
       )}
 
+      {!loading && announcements.length > 0 && filteredAnnouncements.length === 0 && (
+        <div className="py-10 text-center text-xs text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800/60">
+          <span className="text-2xl block mb-2">🔍</span>
+          <p className="font-semibold text-slate-400">
+            No {filter === 'CAMPUS' ? 'campus-wide' : 'course-specific'} announcements found
+          </p>
+          <button
+            onClick={() => setFilter('ALL')}
+            className="mt-2 text-xs text-indigo-400 hover:underline cursor-pointer"
+          >
+            Show all announcements
+          </button>
+        </div>
+      )}
+
       {/* Announcements List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {announcements.map((ann) => (
+        {filteredAnnouncements.map((ann) => (
           <div
             key={ann.id}
             id={`announcement_${ann.id}`}

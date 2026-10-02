@@ -20,9 +20,16 @@ export const TraineeDashboard: React.FC = () => {
   const [selectedCertForModal, setSelectedCertForModal] = useState<Certificate | null>(null);
   const [feedbackCourseModal, setFeedbackCourseModal] = useState<{ courseId: number; courseTitle: string; trainerId?: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [enrollingId, setEnrollingId] = useState<number | null>(null);
+
+  // Search & Filter States
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
+  const [myCoursesSearchQuery, setMyCoursesSearchQuery] = useState('');
+  const [myCoursesStatusFilter, setMyCoursesStatusFilter] = useState<'ALL' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
+  const [certSearchQuery, setCertSearchQuery] = useState('');
 
   // Active quiz taker state
   const [activeQuizToTake, setActiveQuizToTake] = useState<Quiz | null>(null);
@@ -33,13 +40,14 @@ export const TraineeDashboard: React.FC = () => {
 
   const loadTraineeData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [enrollments, allCourses, allQuizzes, attempts, myCerts] = await Promise.all([
-        coursesApi.getMyEnrolledCourses().catch(() => []),
-        coursesApi.getCourses().catch(() => []),
-        quizzesApi.getQuizzes().catch(() => []),
-        quizzesApi.getMyAttempts().catch(() => []),
-        certificatesApi.getMyCertificates().catch(() => []),
+        coursesApi.getMyEnrolledCourses(),
+        coursesApi.getCourses(),
+        quizzesApi.getQuizzes(),
+        quizzesApi.getMyAttempts(),
+        certificatesApi.getMyCertificates(),
       ]);
 
       setMyEnrollments(enrollments);
@@ -52,6 +60,7 @@ export const TraineeDashboard: React.FC = () => {
       notificationsApi.checkDeadlines().catch(() => {});
     } catch (err: unknown) {
       console.error('Failed to load trainee data', err);
+      setLoadError('Unable to load your dashboard data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -137,6 +146,50 @@ export const TraineeDashboard: React.FC = () => {
     }
   };
 
+  // Filtered Catalog
+  const filteredCatalog = catalog.filter((c) => {
+    if (!catalogSearchQuery.trim()) return true;
+    const q = catalogSearchQuery.toLowerCase();
+    return c.title.toLowerCase().includes(q) || (c.description && c.description.toLowerCase().includes(q));
+  });
+
+  // Filtered My Courses
+  const filteredMyCourses = myEnrollments.filter((enr) => {
+    const course = catalog.find((c) => c.id === enr.course_id);
+    const title = course?.title || `Course #${enr.course_id}`;
+    const desc = course?.description || '';
+    const q = myCoursesSearchQuery.trim().toLowerCase();
+    const matchesSearch = !q || title.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
+    const matchesStatus =
+      myCoursesStatusFilter === 'ALL' ||
+      (myCoursesStatusFilter === 'COMPLETED' ? !!enr.completed_at : !enr.completed_at);
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filtered Certificates
+  const filteredCertificates = certificates.filter((cert) => {
+    if (!certSearchQuery.trim()) return true;
+    const q = certSearchQuery.toLowerCase();
+    return (
+      cert.certificate_code.toLowerCase().includes(q) ||
+      (cert.course_title && cert.course_title.toLowerCase().includes(q))
+    );
+  });
+
+  // Performance Summary calculations
+  const totalEnrolled = myEnrollments.length;
+  const completedCoursesCount = myEnrollments.filter((e) => !!e.completed_at).length;
+  const courseCompletionRate = totalEnrolled > 0 ? Math.round((completedCoursesCount / totalEnrolled) * 100) : 0;
+  const totalQuizzesAttempted = myAttempts.length;
+  const passedQuizzesCount = myAttempts.filter((a) => a.score >= 50).length;
+  const quizPassRate = totalQuizzesAttempted > 0 ? Math.round((passedQuizzesCount / totalQuizzesAttempted) * 100) : 0;
+  const avgQuizScore = totalQuizzesAttempted > 0
+    ? Math.round(myAttempts.reduce((sum, a) => sum + a.score, 0) / totalQuizzesAttempted)
+    : null;
+  const performanceTier = avgQuizScore !== null
+    ? (avgQuizScore >= 90 ? 'A+' : avgQuizScore >= 80 ? 'A' : avgQuizScore >= 70 ? 'B' : avgQuizScore >= 60 ? 'C' : avgQuizScore >= 50 ? 'Pass' : 'Needs Practice')
+    : null;
+
   const navTabs = [
     { id: 'my-courses', label: `My Courses (${myEnrollments.length})` },
     { id: 'catalog', label: `Available Courses (${catalog.length})` },
@@ -145,7 +198,6 @@ export const TraineeDashboard: React.FC = () => {
     { id: 'certificates', label: `Certificates (${certificates.length})` },
     { id: 'announcements', label: '📢 Announcements' },
     { id: 'profile', label: 'My Profile & Skills' },
-
     { id: 'skill-gap', label: 'Skill Gap & Recommendations' },
   ];
 
@@ -178,15 +230,107 @@ export const TraineeDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-2xl text-center">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Enrolled Modules</span>
-              <span className="text-xl font-black text-white">{myEnrollments.length}</span>
+            <button
+              onClick={loadTraineeData}
+              disabled={loading}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer"
+            >
+              {loading ? 'Refreshing...' : '↻ Refresh'}
+            </button>
+          </div>
+        </div>
+
+        {loadError && (
+          <div className="mb-6 p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-center space-y-3">
+            <p className="text-sm font-semibold text-rose-400">{loadError}</p>
+            <p className="text-xs text-slate-400">Unable to load dashboard data. Please check connection and try again.</p>
+            <button
+              onClick={loadTraineeData}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer border border-slate-700"
+            >
+              ↻ Try Again
+            </button>
+          </div>
+        )}
+
+        {/* Trainee Performance Visual Summary */}
+        <div className="mb-8 p-6 bg-slate-900/90 border border-slate-800 rounded-3xl shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-0.5 rounded-full">
+                Learning Progress Telemetry
+              </span>
+              <h3 className="text-base font-bold text-white mt-1">Academic & Assessment Performance</h3>
             </div>
-            <div className="px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-2xl text-center">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Quizzes Completed</span>
-              <span className="text-xl font-black text-emerald-400">{myAttempts.length}</span>
+            {performanceTier && (
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs text-slate-400">Academic Standing:</span>
+                <span className="px-3 py-1 rounded-xl text-xs font-black bg-indigo-600/30 text-indigo-300 border border-indigo-500/40">
+                  Tier {performanceTier}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* 1. Enrolled */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Enrolled Courses</span>
+              <span className="text-2xl font-black text-white mt-1 block">{totalEnrolled}</span>
+            </div>
+
+            {/* 2. Completed */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Completed</span>
+              <span className="text-2xl font-black text-emerald-400 mt-1 block">{completedCoursesCount}</span>
+              <span className="text-[10px] text-slate-400">{courseCompletionRate}% rate</span>
+            </div>
+
+            {/* 3. Quizzes Attempted */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Assessments</span>
+              <span className="text-2xl font-black text-white mt-1 block">{totalQuizzesAttempted}</span>
+            </div>
+
+            {/* 4. Quizzes Passed */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Passed</span>
+              <span className="text-2xl font-black text-cyan-400 mt-1 block">{passedQuizzesCount}</span>
+              <span className="text-[10px] text-slate-400">{quizPassRate}% pass rate</span>
+            </div>
+
+            {/* 5. Average Score */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Average Score</span>
+              <span className="text-2xl font-black text-amber-300 mt-1 block">
+                {avgQuizScore !== null ? `${avgQuizScore}%` : '—'}
+              </span>
+              <span className="text-[10px] text-slate-400">Min 50% pass</span>
+            </div>
+
+            {/* 6. Certificates */}
+            <div className="p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Certificates</span>
+              <span className="text-2xl font-black text-violet-300 mt-1 block">{certificates.length}</span>
+              <span className="text-[10px] text-emerald-400">Verified QR</span>
             </div>
           </div>
+
+          {/* Overall Completion Progress Bar */}
+          {totalEnrolled > 0 && (
+            <div className="pt-2">
+              <div className="flex justify-between items-center text-[11px] mb-1">
+                <span className="text-slate-400">Curriculum Completion Progress</span>
+                <span className="text-slate-200 font-bold">{completedCoursesCount} of {totalEnrolled} finished ({courseCompletionRate}%)</span>
+              </div>
+              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-linear-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, courseCompletionRate)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {message && (
@@ -204,18 +348,76 @@ export const TraineeDashboard: React.FC = () => {
         {/* Tab 1: My Courses */}
         {activeTab === 'my-courses' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-xl font-bold text-white">My Enrolled Courses</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Programs you have registered for.</p>
               </div>
-              <button
-                onClick={() => setActiveTab('catalog')}
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
-              >
-                Browse Catalog →
-              </button>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono">
+                  Showing {filteredMyCourses.length} of {myEnrollments.length}
+                </span>
+                <button
+                  onClick={() => setActiveTab('catalog')}
+                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                >
+                  Browse Catalog →
+                </button>
+              </div>
             </div>
+
+            {/* My Courses Search & Status Filter */}
+            {myEnrollments.length > 0 && (
+              <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={myCoursesSearchQuery}
+                    onChange={(e) => setMyCoursesSearchQuery(e.target.value)}
+                    placeholder="Search enrolled courses by title..."
+                    className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                  />
+                  {myCoursesSearchQuery && (
+                    <button
+                      onClick={() => setMyCoursesSearchQuery('')}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                    {(['ALL', 'IN_PROGRESS', 'COMPLETED'] as const).map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => setMyCoursesStatusFilter(st)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                          myCoursesStatusFilter === st
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {st === 'ALL' ? 'All' : st === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {(myCoursesSearchQuery || myCoursesStatusFilter !== 'ALL') && (
+                    <button
+                      onClick={() => {
+                        setMyCoursesSearchQuery('');
+                        setMyCoursesStatusFilter('ALL');
+                      }}
+                      className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {loading ? (
               <div className="py-12 text-center text-slate-500 text-xs">Loading your enrollments...</div>
@@ -232,9 +434,23 @@ export const TraineeDashboard: React.FC = () => {
                   Browse Available Courses
                 </button>
               </div>
+            ) : filteredMyCourses.length === 0 ? (
+              <div className="py-12 bg-slate-900 border border-slate-800 rounded-3xl text-center">
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No courses match your filter criteria</p>
+                <button
+                  onClick={() => {
+                    setMyCoursesSearchQuery('');
+                    setMyCoursesStatusFilter('ALL');
+                  }}
+                  className="mt-3 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Clear Filters
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {myEnrollments.map((enr) => (
+                {filteredMyCourses.map((enr) => (
                   <div
                     key={enr.id}
                     className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between"
@@ -302,7 +518,6 @@ export const TraineeDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
                 ))}
               </div>
             )}
@@ -312,11 +527,44 @@ export const TraineeDashboard: React.FC = () => {
         {/* Tab 2: Available Courses */}
         {activeTab === 'catalog' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-xl font-bold text-white">Course Catalog Directory</h3>
                 <p className="text-xs text-slate-400 mt-0.5">Explore institutional capacity building modules.</p>
               </div>
+              <span className="text-xs text-slate-400 font-mono">
+                Showing {filteredCatalog.length} of {catalog.length} courses
+              </span>
+            </div>
+
+            {/* Course Catalog Search */}
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={catalogSearchQuery}
+                  onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                  placeholder="Search available courses by title or syllabus keywords..."
+                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+                {catalogSearchQuery && (
+                  <button
+                    onClick={() => setCatalogSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {catalogSearchQuery && (
+                <button
+                  onClick={() => setCatalogSearchQuery('')}
+                  className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                >
+                  Clear Search
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -325,9 +573,23 @@ export const TraineeDashboard: React.FC = () => {
               <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center text-slate-500 text-xs">
                 No published courses available at this time.
               </div>
+            ) : filteredCatalog.length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center">
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No courses match your search</p>
+                <p className="text-xs text-slate-500 mt-1 mb-3">
+                  Try searching for different keywords or topics.
+                </p>
+                <button
+                  onClick={() => setCatalogSearchQuery('')}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {catalog.map((course) => {
+                {filteredCatalog.map((course) => {
                   const alreadyEnrolled = isEnrolled(course.id);
                   return (
                     <div
@@ -586,7 +848,7 @@ export const TraineeDashboard: React.FC = () => {
                           {question.options.map((opt, optIdx) => (
                             <label
                               key={optIdx}
-                              className={`flex items-center gap-3 p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                              className={`flex items-center gap-3 p-3.5 sm:p-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all w-full ${
                                 userAnswers[question.id] === optIdx
                                   ? 'bg-indigo-950/60 border-indigo-600 text-white'
                                   : 'bg-slate-850 border-slate-700/50 text-slate-300 hover:bg-slate-800'
@@ -599,9 +861,9 @@ export const TraineeDashboard: React.FC = () => {
                                 onChange={() =>
                                   setUserAnswers({ ...userAnswers, [question.id]: optIdx })
                                 }
-                                className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                                className="w-4 h-4 shrink-0 text-indigo-600 focus:ring-indigo-500"
                               />
-                              <span>{opt}</span>
+                              <span className="leading-relaxed">{opt}</span>
                             </label>
                           ))}
                         </div>
@@ -644,14 +906,48 @@ export const TraineeDashboard: React.FC = () => {
                   Tamper-proof verifiable credentials awarded upon achieving course completion criteria.
                 </p>
               </div>
-              <a
-                href="/verify-certificate"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
-              >
-                <span>Public Verification Registry ↗</span>
-              </a>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono">
+                  Showing {filteredCertificates.length} of {certificates.length}
+                </span>
+                <a
+                  href="/verify-certificate"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
+                >
+                  <span>Public Verification Registry ↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Certificates Search */}
+            <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={certSearchQuery}
+                  onChange={(e) => setCertSearchQuery(e.target.value)}
+                  placeholder="Search your certificates by code or course title..."
+                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+                {certSearchQuery && (
+                  <button
+                    onClick={() => setCertSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {certSearchQuery && (
+                <button
+                  onClick={() => setCertSearchQuery('')}
+                  className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                >
+                  Clear Search
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -670,9 +966,20 @@ export const TraineeDashboard: React.FC = () => {
                   Continue Coursework
                 </button>
               </div>
+            ) : filteredCertificates.length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center">
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No certificates match your search</p>
+                <button
+                  onClick={() => setCertSearchQuery('')}
+                  className="mt-3 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {certificates.map((cert) => (
+                {filteredCertificates.map((cert) => (
                   <div
                     key={cert.id}
                     className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between relative overflow-hidden group hover:border-indigo-500/40 transition-all"

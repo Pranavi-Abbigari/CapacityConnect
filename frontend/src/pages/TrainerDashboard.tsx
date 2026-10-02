@@ -53,8 +53,13 @@ export const TrainerDashboard: React.FC = () => {
   const [activeResultsModal, setActiveResultsModal] = useState<QuizResultsSummary | null>(null);
   const [loadingResults, setLoadingResults] = useState(false);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [courseSearch, setCourseSearch] = useState('');
+  const [quizSearch, setQuizSearch] = useState('');
+
   const loadData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [courses, allQuizzes] = await Promise.all([
         coursesApi.getTrainerCourses().catch(() => coursesApi.getCourses()),
@@ -64,6 +69,7 @@ export const TrainerDashboard: React.FC = () => {
       setQuizzes(allQuizzes);
     } catch (err: unknown) {
       console.error('Error fetching trainer data', err);
+      setLoadError('Unable to load your dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -223,6 +229,24 @@ export const TrainerDashboard: React.FC = () => {
           </div>
         </div>
 
+        {loadError && (
+          <div className="mb-6 p-4 bg-rose-950/40 border border-rose-800/80 rounded-2xl flex items-center justify-between text-rose-200 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <div>
+                <p className="font-semibold">{loadError}</p>
+                <p className="text-[11px] text-rose-300/80">Check your network connection or server status.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => loadData()}
+              className="px-3 py-1.5 bg-rose-900/60 hover:bg-rose-800 border border-rose-700 text-rose-100 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span>↻</span> Try Again
+            </button>
+          </div>
+        )}
+
         {message && (
           <div
             className={`mb-6 p-4 rounded-2xl text-sm font-medium border ${
@@ -238,14 +262,26 @@ export const TrainerDashboard: React.FC = () => {
         {/* Tab 1: Courses */}
         {activeTab === 'courses' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white">Your Training Programs & Courses</h3>
-              <button
-                onClick={() => setIsCourseModalOpen(true)}
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer"
-              >
-                + New Course
-              </button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-white">Your Training Programs & Courses</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Author modules, setup prerequisites, and review trainee ratings.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Filter courses by title or summary..."
+                  value={courseSearch}
+                  onChange={(e) => setCourseSearch(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full sm:w-64"
+                />
+                <button
+                  onClick={() => setIsCourseModalOpen(true)}
+                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0"
+                >
+                  + New Course
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -263,9 +299,27 @@ export const TrainerDashboard: React.FC = () => {
                   Create Your First Course
                 </button>
               </div>
+            ) : myCourses.filter((c) =>
+                (c.title || '').toLowerCase().includes(courseSearch.toLowerCase()) ||
+                (c.description || '').toLowerCase().includes(courseSearch.toLowerCase())
+              ).length === 0 ? (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
+                <p className="text-sm font-medium text-slate-300">No courses match "{courseSearch}"</p>
+                <button
+                  onClick={() => setCourseSearch('')}
+                  className="mt-3 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {myCourses.map((course) => (
+                {myCourses
+                  .filter((c) =>
+                    (c.title || '').toLowerCase().includes(courseSearch.toLowerCase()) ||
+                    (c.description || '').toLowerCase().includes(courseSearch.toLowerCase())
+                  )
+                  .map((course) => (
                   <div
                     key={course.id}
                     className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-3xl p-6 shadow-xl flex flex-col justify-between transition-all"
@@ -347,19 +401,28 @@ export const TrainerDashboard: React.FC = () => {
         {/* Tab 2: Quizzes */}
         {activeTab === 'quizzes' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="text-xl font-bold text-white">Subject-wise Assessments & MCQs</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Build multi-choice questionnaires and view automatic grading outcomes.
                 </p>
               </div>
-              <button
-                onClick={() => setIsQuizModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                + New Quiz
-              </button>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Filter quizzes by title or course ID..."
+                  value={quizSearch}
+                  onChange={(e) => setQuizSearch(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-full sm:w-64"
+                />
+                <button
+                  onClick={() => setIsQuizModalOpen(true)}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer shrink-0"
+                >
+                  + New Quiz
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -377,9 +440,27 @@ export const TrainerDashboard: React.FC = () => {
                   Create Assessment Quiz
                 </button>
               </div>
+            ) : quizzes.filter((q) =>
+                (q.title || '').toLowerCase().includes(quizSearch.toLowerCase()) ||
+                String(q.course_id || '').includes(quizSearch.trim())
+              ).length === 0 ? (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 text-center">
+                <p className="text-sm font-medium text-slate-300">No assessments match "{quizSearch}"</p>
+                <button
+                  onClick={() => setQuizSearch('')}
+                  className="mt-3 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-indigo-400 text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {quizzes.map((quiz) => (
+                {quizzes
+                  .filter((q) =>
+                    (q.title || '').toLowerCase().includes(quizSearch.toLowerCase()) ||
+                    String(q.course_id || '').includes(quizSearch.trim())
+                  )
+                  .map((quiz) => (
                   <div
                     key={quiz.id}
                     className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between"

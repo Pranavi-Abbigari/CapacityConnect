@@ -20,19 +20,31 @@ export const AdminDashboard: React.FC = () => {
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState<boolean>(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [inspectingUserId, setInspectingUserId] = useState<number | null>(null);
 
+  // Search & Filter states
+  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'ADMIN' | 'TRAINER' | 'TRAINEE'>('ALL');
+  const [userStatusFilter, setUserStatusFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
+
+  const [courseSearchQuery, setCourseSearchQuery] = useState<string>('');
+  const [courseStatusFilter, setCourseStatusFilter] = useState<'ALL' | 'PUBLISHED' | 'DRAFT'>('ALL');
+
+  const [certSearchQuery, setCertSearchQuery] = useState<string>('');
+  const [certStatusFilter, setCertStatusFilter] = useState<'ALL' | 'ACTIVE' | 'REVOKED'>('ALL');
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [pending, users, courseList, certList] = await Promise.all([
-        adminApi.getPendingUsers().catch(() => []),
-        adminApi.getAllUsers().catch(() => []),
-        coursesApi.getCourses().catch(() => []),
-        certificatesApi.getAdminCertificates().catch(() => []),
+        adminApi.getPendingUsers(),
+        adminApi.getAllUsers(),
+        coursesApi.getCourses(),
+        certificatesApi.getAdminCertificates(),
       ]);
 
       setPendingUsers(pending);
@@ -41,6 +53,7 @@ export const AdminDashboard: React.FC = () => {
       setCertificates(certList);
     } catch (err: unknown) {
       console.error('Failed to load admin dashboard data', err);
+      setLoadError('Unable to load your dashboard data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -86,11 +99,44 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Filtered User Directory
+  const filteredUsers = allUsers.filter((u) => {
+    const matchesSearch =
+      !userSearchQuery.trim() ||
+      u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearchQuery.toLowerCase());
+    const matchesRole = userRoleFilter === 'ALL' || u.role === userRoleFilter;
+    const matchesStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Filtered Courses
+  const filteredCourses = courses.filter((c) => {
+    const matchesSearch =
+      !courseSearchQuery.trim() ||
+      c.title.toLowerCase().includes(courseSearchQuery.toLowerCase()) ||
+      (c.description && c.description.toLowerCase().includes(courseSearchQuery.toLowerCase()));
+    const matchesStatus = courseStatusFilter === 'ALL' || c.status === courseStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Filtered Certificates
+  const filteredCertificates = certificates.filter((cert) => {
+    const q = certSearchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      cert.certificate_code.toLowerCase().includes(q) ||
+      (cert.course_title && cert.course_title.toLowerCase().includes(q)) ||
+      (cert.trainee_name && cert.trainee_name.toLowerCase().includes(q));
+    const matchesStatus = certStatusFilter === 'ALL' || cert.status === certStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   const navTabs = [
     { id: 'overview', label: 'Overview & Analytics' },
     { id: 'approvals', label: `Pending Approvals (${pendingUsers.length})` },
-    { id: 'users', label: 'User Directory' },
-    { id: 'courses', label: 'Course Catalog' },
+    { id: 'users', label: `User Directory (${allUsers.length})` },
+    { id: 'courses', label: `Course Catalog (${courses.length})` },
     { id: 'certificates', label: `Certificates (${certificates.length})` },
     { id: 'announcements', label: '📢 Announcements' },
   ];
@@ -116,9 +162,9 @@ export const AdminDashboard: React.FC = () => {
               </span>
               <span className="text-xs text-slate-400">Live Production Mode</span>
             </div>
-            <h2 className="text-2xl font-black text-white mt-2">Capacity Portal Administration</h2>
+            <h2 className="text-2xl font-black text-white mt-2">LearnBridge Administration Control Center</h2>
             <p className="text-xs text-slate-400 mt-1">
-              Oversee capacity building metrics, manage user approval pipelines, and govern courses.
+              Oversee institutional capacity building metrics, manage user approval pipelines, and govern courses.
             </p>
           </div>
           <div className="flex items-center gap-2 self-start md:self-auto">
@@ -138,6 +184,18 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {loadError && (
+          <div className="mb-6 p-6 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-center space-y-3">
+            <p className="text-sm font-semibold text-rose-400">{loadError}</p>
+            <p className="text-xs text-slate-400">Unable to load dashboard data. Please check connection and try again.</p>
+            <button
+              onClick={fetchDashboardData}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer border border-slate-700"
+            >
+              ↻ Try Again
+            </button>
+          </div>
+        )}
 
         {feedback && (
           <div
@@ -215,7 +273,7 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between p-3 bg-slate-800/40 rounded-xl border border-slate-800">
                     <span>Platform</span>
-                    <span className="font-mono text-purple-400">Capacity Connect</span>
+                    <span className="font-mono text-purple-400">LearnBridge</span>
                   </div>
                 </div>
               </div>
@@ -289,82 +347,238 @@ export const AdminDashboard: React.FC = () => {
         {/* Tab: User Directory */}
         {activeTab === 'users' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-xl font-bold text-white">All Platform Users</h3>
                 <p className="text-xs text-slate-400 mt-1">Complete directory of system users and their roles.</p>
               </div>
-              <span className="text-xs text-slate-400 font-mono">Total: {allUsers.length}</span>
+              <span className="text-xs text-slate-400 font-mono">
+                Showing {filteredUsers.length} of {allUsers.length} users
+              </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
-                    <th className="py-3 px-4">ID</th>
-                    <th className="py-3 px-4">Name</th>
-                    <th className="py-3 px-4">Email</th>
-                    <th className="py-3 px-4">Role</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Competency Profile</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {allUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-4 font-mono text-slate-500">#{user.id}</td>
-                      <td className="py-3 px-4 font-semibold text-white">{user.name}</td>
-                      <td className="py-3 px-4 text-slate-300">{user.email}</td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded-md font-semibold text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-md font-semibold text-[10px] border ${
-                            user.status === 'APPROVED'
-                              ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
-                              : 'bg-amber-950/60 text-amber-300 border-amber-800'
-                          }`}
-                        >
-                          {user.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => setInspectingUserId(user.id)}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white rounded-lg text-[11px] font-semibold transition-all border border-slate-700 cursor-pointer"
-                        >
-                          Audit Profile →
-                        </button>
-                      </td>
-                    </tr>
+            {/* Search and Filters */}
+            <div className="mb-6 p-4 bg-slate-800/40 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                  placeholder="Search users by name or email..."
+                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+                {userSearchQuery && (
+                  <button
+                    onClick={() => setUserSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  {(['ALL', 'ADMIN', 'TRAINER', 'TRAINEE'] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setUserRoleFilter(r)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        userRoleFilter === r
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {r}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  {(['ALL', 'APPROVED', 'PENDING'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setUserStatusFilter(s)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        userStatusFilter === s
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
+                {(userSearchQuery || userRoleFilter !== 'ALL' || userStatusFilter !== 'ALL') && (
+                  <button
+                    onClick={() => {
+                      setUserSearchQuery('');
+                      setUserRoleFilter('ALL');
+                      setUserStatusFilter('ALL');
+                    }}
+                    className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
+
+            {filteredUsers.length === 0 ? (
+              <div className="py-12 bg-slate-850 border border-slate-800 rounded-2xl text-center">
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No users match your criteria</p>
+                <p className="text-xs text-slate-500 mt-1 mb-3">
+                  Try adjusting your search query, role filter, or approval status.
+                </p>
+                <button
+                  onClick={() => {
+                    setUserSearchQuery('');
+                    setUserRoleFilter('ALL');
+                    setUserStatusFilter('ALL');
+                  }}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">ID</th>
+                      <th className="py-3 px-4">Name</th>
+                      <th className="py-3 px-4">Email</th>
+                      <th className="py-3 px-4">Role</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Competency Profile</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 px-4 font-mono text-slate-500">#{user.id}</td>
+                        <td className="py-3 px-4 font-semibold text-white">{user.name}</td>
+                        <td className="py-3 px-4 text-slate-300">{user.email}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-md font-semibold text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-semibold text-[10px] border ${
+                              user.status === 'APPROVED'
+                                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+                                : 'bg-amber-950/60 text-amber-300 border-amber-800'
+                            }`}
+                          >
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => setInspectingUserId(user.id)}
+                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white rounded-lg text-[11px] font-semibold transition-all border border-slate-700 cursor-pointer"
+                          >
+                            Audit Profile →
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
         {/* Tab: Courses */}
         {activeTab === 'courses' && (
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h3 className="text-xl font-bold text-white">Course Catalog Directory</h3>
                 <p className="text-xs text-slate-400 mt-1">All capacity training modules published on LearnBridge.</p>
               </div>
-              <span className="text-xs text-slate-400 font-mono">Total: {courses.length}</span>
+              <span className="text-xs text-slate-400 font-mono">
+                Showing {filteredCourses.length} of {courses.length} courses
+              </span>
             </div>
 
-            {courses.length === 0 ? (
-              <div className="py-12 text-center text-slate-500 text-xs">
-                No courses published yet.
+            {/* Course Search & Filter Controls */}
+            <div className="mb-6 p-4 bg-slate-800/40 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={courseSearchQuery}
+                  onChange={(e) => setCourseSearchQuery(e.target.value)}
+                  placeholder="Search courses by title or syllabus keywords..."
+                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+                {courseSearchQuery && (
+                  <button
+                    onClick={() => setCourseSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  {(['ALL', 'PUBLISHED', 'DRAFT'] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setCourseStatusFilter(st)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        courseStatusFilter === st
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+
+                {(courseSearchQuery || courseStatusFilter !== 'ALL') && (
+                  <button
+                    onClick={() => {
+                      setCourseSearchQuery('');
+                      setCourseStatusFilter('ALL');
+                    }}
+                    className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredCourses.length === 0 ? (
+              <div className="py-12 bg-slate-850 border border-slate-800 rounded-2xl text-center">
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No courses match your criteria</p>
+                <p className="text-xs text-slate-500 mt-1 mb-3">
+                  Try adjusting your search terms or status filter.
+                </p>
+                <button
+                  onClick={() => {
+                    setCourseSearchQuery('');
+                    setCourseStatusFilter('ALL');
+                  }}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                >
+                  Clear Filters
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {courses.map((course) => (
+                {filteredCourses.map((course) => (
                   <div
                     key={course.id}
                     className="p-5 bg-slate-800/50 border border-slate-700/60 rounded-2xl flex flex-col justify-between"
@@ -391,7 +605,6 @@ export const AdminDashboard: React.FC = () => {
                       </button>
                     </div>
                   </div>
-
                 ))}
               </div>
             )}
@@ -408,25 +621,94 @@ export const AdminDashboard: React.FC = () => {
                   Global credential ledger. Audit certificates, preview cryptographic seals, and execute revocations.
                 </p>
               </div>
-              <a
-                href="/verify-certificate"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
-              >
-                <span>Public Verification Registry ↗</span>
-              </a>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono">
+                  Showing {filteredCertificates.length} of {certificates.length}
+                </span>
+                <a
+                  href="/verify-certificate"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold px-4 py-2 bg-slate-800 text-indigo-400 hover:text-indigo-300 rounded-xl border border-slate-700 hover:bg-slate-700 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
+                >
+                  <span>Public Verification Registry ↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Certificate Search & Filter */}
+            <div className="p-4 bg-slate-800/40 border border-slate-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={certSearchQuery}
+                  onChange={(e) => setCertSearchQuery(e.target.value)}
+                  placeholder="Search certificates by code, course title, or recipient name..."
+                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs"
+                />
+                {certSearchQuery && (
+                  <button
+                    onClick={() => setCertSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  {(['ALL', 'ACTIVE', 'REVOKED'] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setCertStatusFilter(st)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        certStatusFilter === st
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+
+                {(certSearchQuery || certStatusFilter !== 'ALL') && (
+                  <button
+                    onClick={() => {
+                      setCertSearchQuery('');
+                      setCertStatusFilter('ALL');
+                    }}
+                    className="px-2.5 py-1 text-[11px] text-rose-400 hover:text-rose-300 font-semibold cursor-pointer underline"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
 
             {loading ? (
               <div className="py-12 text-center text-slate-500 text-xs">Loading certificate records...</div>
-            ) : certificates.length === 0 ? (
+            ) : filteredCertificates.length === 0 ? (
               <div className="py-12 bg-slate-850 border border-slate-800 rounded-2xl text-center">
-                <span className="text-3xl block mb-2">🏆</span>
-                <p className="text-sm font-semibold text-slate-300">No Certificates Issued Yet</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Certificates issued by trainers or admins will be archived and auditable here.
+                <span className="text-3xl block mb-2">🔍</span>
+                <p className="text-sm font-semibold text-slate-300">No Certificates Found</p>
+                <p className="text-xs text-slate-500 mt-1 mb-3">
+                  {certificates.length === 0
+                    ? 'Certificates issued by trainers or admins will be archived and auditable here.'
+                    : 'No certificates match your search and filter criteria.'}
                 </p>
+                {certificates.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setCertSearchQuery('');
+                      setCertStatusFilter('ALL');
+                    }}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto border border-slate-800 rounded-2xl">
@@ -444,7 +726,7 @@ export const AdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {certificates.map((cert) => (
+                    {filteredCertificates.map((cert) => (
                       <tr key={cert.id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-indigo-300">
                           {cert.certificate_code}

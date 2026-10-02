@@ -60,9 +60,11 @@ export const LoginPage: React.FC = () => {
 
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative z-10">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-xl shadow-indigo-600/30">
-            <span className="text-white font-black text-2xl">LB</span>
-          </div>
+          <img
+            src="/learnbridge-logo.png"
+            alt="LearnBridge Logo"
+            className="w-16 h-16 mx-auto mb-3 object-contain rounded-2xl"
+          />
           <h1 className="text-2xl font-extrabold text-white tracking-tight">LearnBridge</h1>
           <p className="text-slate-400 text-xs mt-1">Capacity Building & Learning Portal</p>
           <div className="mt-4 inline-block px-3 py-1 bg-slate-800/80 border border-slate-700/80 rounded-full">
@@ -86,11 +88,14 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            <label htmlFor="email" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
               Email Address
             </label>
             <input
+              id="email"
+              name="email"
               type="email"
+              autoComplete="username"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -100,11 +105,14 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+            <label htmlFor="password" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
               Password
             </label>
             <input
+              id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

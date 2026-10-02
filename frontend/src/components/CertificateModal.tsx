@@ -13,12 +13,12 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
   const verificationUrl = `${window.location.origin}/verify-certificate?code=${certificate.certificate_code}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto my-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 transition-colors cursor-pointer z-10"
         >
           ✕
         </button>
@@ -32,9 +32,11 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
 
           {/* Header */}
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <span className="text-white font-extrabold text-xl">LB</span>
-            </div>
+            <img
+              src="/learnbridge-logo.png"
+              alt="LearnBridge Logo"
+              className="w-10 h-10 object-contain rounded-xl"
+            />
             <div className="text-left">
               <h2 className="text-lg font-black tracking-wider uppercase text-indigo-300">
                 LearnBridge
@@ -118,25 +120,25 @@ export const CertificateModal: React.FC<CertificateModalProps> = ({ certificate,
         </div>
 
         {/* Modal Actions */}
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-800">
           <a
             href={verificationUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-indigo-400 hover:text-indigo-300 underline font-medium"
+            className="text-xs text-indigo-400 hover:text-indigo-300 underline font-medium text-center sm:text-left"
           >
             Open Public Verification Page ↗
           </a>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all"
+              className="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-all cursor-pointer"
             >
               Print / Save PDF
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition-all"
+              className="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
             >
               Done
             </button>

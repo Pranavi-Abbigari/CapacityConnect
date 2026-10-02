@@ -44,9 +44,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center justify-between h-16">
             {/* Brand Logo & Title */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                <span className="text-white font-extrabold text-xl">LB</span>
-              </div>
+              <img
+                src="/learnbridge-logo.png"
+                alt="LearnBridge Logo"
+                className="w-10 h-10 object-contain rounded-xl"
+              />
               <div>
                 <h1 className="text-lg font-bold text-white tracking-tight">
                   LearnBridge
@@ -111,15 +113,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile Navigation Tabs */}
           {tabs.length > 0 && onTabChange && (
-            <div className="flex md:hidden overflow-x-auto py-2 space-x-1 border-t border-slate-800">
+            <div className="flex md:hidden overflow-x-auto py-2.5 px-0.5 space-x-1.5 border-t border-slate-800 scroll-smooth">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                     activeTab === tab.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white bg-slate-800/40 hover:bg-slate-800'
                   }`}
                 >
                   {tab.label}
